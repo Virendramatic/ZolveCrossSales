@@ -1,0 +1,78 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+        ".validate": "newData.hasChildren(['id', 'role', 'name'])"
+      }
+    },
+    "leads": {
+      "$leadId": {
+        ".read": "auth != null && (data.child('currentOwnerId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+        ".write": "auth != null && (data.child('currentOwnerId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+        ".validate": "newData.hasChildren(['id', 'name', 'phone', 'currentOwnerId'])",
+        "comments": {
+          "$commentId": {
+            ".read": "auth != null && (parent.parent.child('currentOwnerId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+            ".write": "auth != null && (data.child('authorId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')"
+          }
+        },
+        "products": {
+          "$productId": {
+            ".read": "auth != null && (parent.parent.child('currentOwnerId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+            ".write": "auth != null && (parent.parent.child('currentOwnerId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')"
+          }
+        }
+      }
+    },
+    "educationLoans": {
+      "$loanId": {
+        ".read": "auth != null && (data.child('counselorZrmId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+        ".write": "auth != null && (data.child('counselorZrmId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+        ".validate": "newData.hasChildren(['id', 'loanCode', 'leadId', 'counselorZrmId', 'loanStage'])",
+        "lenderApplications": {
+          "$lenderId": {
+            ".read": "auth != null && (parent.parent.child('counselorZrmId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+            ".write": "auth != null && (parent.parent.child('counselorZrmId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')"
+          }
+        },
+        "documentRequests": {
+          "$docRequestId": {
+            ".read": "auth != null && (parent.parent.child('counselorZrmId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+            ".write": "auth != null && (parent.parent.child('counselorZrmId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+            "documents": {
+              "$documentId": {
+                ".read": "auth != null && (parent.parent.parent.parent.child('counselorZrmId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+                ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'ADMIN'"
+              }
+            }
+          }
+        },
+        "stageHistory": {
+          "$historyId": {
+            ".read": "auth != null && (parent.parent.child('counselorZrmId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+            ".write": false
+          }
+        }
+      }
+    },
+    "documents": {
+      "$documentId": {
+        ".read": "auth != null && (data.child('uploadedBy').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'ADMIN'",
+        ".validate": "newData.hasChildren(['id', 'name', 'status'])"
+      }
+    },
+    "auditLogs": {
+      "$logId": {
+        ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'ADMIN'",
+        ".write": false
+      }
+    },
+    "config": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'ADMIN'"
+    }
+  }
+}

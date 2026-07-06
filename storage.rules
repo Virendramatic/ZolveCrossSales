@@ -1,0 +1,95 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuth() && request.auth.customClaims.role == 'ADMIN';
+    }
+    
+    function isOwner(ownerId) {
+      return isAuth() && request.auth.uid == ownerId;
+    }
+    
+    // ─── Document Uploads ─────────────────────────────────────────────────
+    
+    match /loans/{loanId}/documents/{allPaths=**} {
+      // Read: Owner of loan or admin
+      allow read: if isAuth() && (
+        isAdmin() || 
+        resource.metadata.customMetadata.counselorId == request.auth.uid
+      );
+      
+      // Upload: Authenticated users
+      allow write: if isAuth() && (
+        request.resource.size < 10 * 1024 * 1024 && // 10MB limit
+        request.resource.contentType in [
+          'application/pdf',
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        ] &&
+        request.resource.metadata.customMetadata.loanId == loanId
+      );
+      
+      // Delete: Admin only
+      allow delete: if isAdmin();
+    }
+    
+    // ─── User Avatars ─────────────────────────────────────────────────────
+    
+    match /users/{userId}/avatar {
+      // Read: Anyone can read
+      allow read: if isAuth();
+      
+      // Write: User can update own, admin can update all
+      allow write: if isAuth() && (
+        isOwner(userId) || isAdmin()
+      ) && (
+        request.resource.size < 2 * 1024 * 1024 && // 2MB limit
+        request.resource.contentType in [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp'
+        ]
+      );
+      
+      // Delete: User or admin
+      allow delete: if isAuth() && (isOwner(userId) || isAdmin());
+    }
+    
+    // ─── Temp uploads during processing ───────────────────────────────────
+    
+    match /temp/{userId}/{allPaths=**} {
+      // User can upload to their temp folder
+      allow read: if isAuth() && (
+        isOwner(userId) || isAdmin()
+      );
+      
+      allow write: if isAuth() && (
+        isOwner(userId) || isAdmin()
+      ) && (
+        request.resource.size < 50 * 1024 * 1024 // 50MB for temp
+      );
+      
+      allow delete: if isAuth() && (
+        isOwner(userId) || isAdmin()
+      );
+    }
+    
+    // ─── Deny all other access ────────────────────────────────────────────
+    
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

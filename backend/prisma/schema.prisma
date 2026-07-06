@@ -1,0 +1,439 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users/Counselors ────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  phone         String?
+  role          UserRole @default(COUNSELOR)
+  passwordHash  String
+  status        UserStatus @default(ACTIVE)
+  lastLogin     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deactivatedAt DateTime?
+
+  // Relationships
+  leadsCreated       Lead[]                @relation("CreatedByUser")
+  leadsOwned         Lead[]                @relation("OwnedByUser")
+  productInstancesOwned ProductInstance[] @relation("OwnedByUser")
+  commentsAuthored   Comment[]            @relation("AuthorUser")
+  auditLogs          AuditLog[]           @relation("UserAction")
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+enum UserRole {
+  ADMIN
+  COUNSELOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+// ─── Leads (Master Entity) ────────────────────────────────────────────────────
+
+model Lead {
+  id                String   @id @default(cuid())
+  leadCode          String   @unique @default(cuid()) // ZL-XXXX format generated on creation
+  name              String
+  phone             String
+  email             String?
+  country           String?
+  intake            String?
+  
+  createdByUserId   String
+  currentOwnerId    String?
+  
+  globalCallStatus  CallStatus @default(NOT_CALLED)
+  rescheduleDate    DateTime?
+  
+  leadSource        String?
+  notes             String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  archivedAt        DateTime?
+
+  // Relationships
+  createdByUser     User              @relation("CreatedByUser", fields: [createdByUserId], references: [id])
+  currentOwner      User?             @relation("OwnedByUser", fields: [currentOwnerId], references: [id])
+  productInstances  ProductInstance[]
+  comments          Comment[]
+  educationLoans    EducationLoanApplication[]
+
+  @@index([globalCallStatus])
+  @@index([currentOwnerId])
+  @@index([createdByUserId])
+  @@index([leadSource])
+  @@index([archivedAt])
+}
+
+enum CallStatus {
+  NOT_CALLED
+  RESPONDING
+  NOT_RESPONDING
+  CONVERTED
+}
+
+// ─── Product Instances ────────────────────────────────────────────────────────
+
+model ProductInstance {
+  id              String      @id @default(cuid())
+  productCode     String      @unique @default(cuid()) // PI-XXXX format
+  leadId          String
+  productType     ProductType
+  
+  status          String?
+  stage           String?
+  
+  ownerUserId     String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+  archivedAt      DateTime?
+
+  // Relationships
+  lead            Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  ownerUser       User?               @relation("OwnedByUser", fields: [ownerUserId], references: [id])
+  educationLoan   EducationLoanApplication?
+
+  @@unique([leadId, productType])
+  @@index([leadId])
+  @@index([productType])
+  @@index([ownerUserId])
+}
+
+enum ProductType {
+  EDUCATION_LOAN
+  REMITTANCE
+  ACCOMMODATION
+  CREDIT_CARD
+}
+
+// ─── Comments ────────────────────────────────────────────────────────────────
+
+model Comment {
+  id            String   @id @default(cuid())
+  leadId        String
+  
+  content       String
+  authorId      String
+  authorName    String
+  authorRole    String
+  
+  isInternal    Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime?
+  editedBy      String?
+  deletedAt     DateTime?
+
+  // Relationships
+  lead          Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author        User   @relation("AuthorUser", fields: [authorId], references: [id])
+
+  @@index([leadId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+// ─── Education Loan Applications ──────────────────────────────────────────────
+
+model EducationLoanApplication {
+  id                String    @id @default(cuid())
+  loanCode          String    @unique @default(cuid()) // EL-XXXX format
+  leadId            String    @unique
+  productInstanceId String?   @unique
+  
+  university        String
+  course            String
+  targetCountry     String?
+  totalLoanAmount   BigInt
+  expectedIntake    String?
+  collateralType    CollateralType @default(NON_COLLATERAL)
+  
+  coApplicantName   String?
+  coApplicantType   ApplicantType?
+  
+  loanStage         LoanStage @default(STARTED)
+  stageUpdatedAt    DateTime @default(now())
+  
+  counselorZrmId    String?
+  counselorLrmId    String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  completedAt       DateTime?
+  archivedAt        DateTime?
+
+  // Relationships
+  lead              Lead                    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  productInstance   ProductInstance?        @relation(fields: [productInstanceId], references: [id])
+  lenderApplications LenderApplication[]
+  documentRequests  DocumentRequest[]
+  stageHistory      LoanStageHistory[]
+
+  @@index([leadId])
+  @@index([loanStage])
+  @@index([counselorZrmId])
+}
+
+enum CollateralType {
+  SECURED
+  NON_COLLATERAL
+}
+
+enum ApplicantType {
+  SALARIED
+  SELF_EMPLOYED
+}
+
+enum LoanStage {
+  STARTED
+  DOCS_PENDING
+  DOCS_RECEIVED
+  CALL_SCHEDULED
+  SANCTIONED
+  DISBURSED
+  LOST
+}
+
+// ─── Lender Applications ─────────────────────────────────────────────────────
+
+model LenderApplication {
+  id                    String    @id @default(cuid())
+  lenderCode            String    @unique @default(cuid()) // LA-XXXX format
+  educationLoanId       String
+  
+  lenderName            String
+  matchScore            Int?
+  recommendationSource  RecommendationSource @default(MANUAL)
+  
+  lenderStatus          LenderStatus @default(INTERESTED)
+  statusUpdatedAt       DateTime @default(now())
+  
+  sanctionAmount        BigInt?
+  roi                   Decimal?  @db.Decimal(5, 2)
+  processingFee         BigInt?
+  sanctionDate          DateTime?
+  sanctionValidity      DateTime?
+  
+  disbursementAmount    BigInt?
+  disbursementDate      DateTime?
+  tranchCount           Int?
+  tranches              Json?
+  
+  rejectionDate         DateTime?
+  rejectionReason       String?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relationships
+  educationLoan         EducationLoanApplication @relation(fields: [educationLoanId], references: [id], onDelete: Cascade)
+  statusHistory         LenderStatusHistory[]
+
+  @@index([educationLoanId])
+  @@index([lenderStatus])
+}
+
+enum RecommendationSource {
+  AUTO_RECOMMENDED
+  MANUAL
+  SYSTEM_MATCH
+}
+
+enum LenderStatus {
+  INTERESTED
+  APPLIED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  DISBURSED
+  WITHDRAWN
+}
+
+// ─── Lender Status History ───────────────────────────────────────────────────
+
+model LenderStatusHistory {
+  id                    String    @id @default(cuid())
+  lenderApplicationId   String
+  
+  previousStatus        LenderStatus?
+  newStatus             LenderStatus
+  changedAt             DateTime @default(now())
+  changedBy             String
+  reason                String?
+  metadata              Json?
+
+  // Relationships
+  lenderApplication     LenderApplication @relation(fields: [lenderApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([lenderApplicationId])
+}
+
+// ─── Loan Stage History ───────────────────────────────────────────────────────
+
+model LoanStageHistory {
+  id                    String    @id @default(cuid())
+  educationLoanId       String
+  
+  previousStage         LoanStage?
+  newStage              LoanStage
+  transitionTimestamp   DateTime @default(now())
+  responsibleCounselorId String?
+  reason                String?
+
+  // Relationships
+  educationLoan         EducationLoanApplication @relation(fields: [educationLoanId], references: [id], onDelete: Cascade)
+
+  @@index([educationLoanId])
+}
+
+// ─── Document Requests ────────────────────────────────────────────────────────
+
+model DocumentRequest {
+  id                String    @id @default(cuid())
+  docRequestCode    String    @unique @default(cuid()) // DR-XXXX format
+  educationLoanId   String
+  
+  categories        DocumentCategory[]
+  
+  sentDate          DateTime?
+  deadline          DateTime?
+  reminderSentAt    DateTime?
+  
+  status            DocumentRequestStatus @default(PENDING)
+  completedAt       DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  educationLoan     EducationLoanApplication @relation(fields: [educationLoanId], references: [id], onDelete: Cascade)
+  documents         DocumentSubmission[]
+
+  @@index([educationLoanId])
+  @@index([status])
+}
+
+enum DocumentCategory {
+  KYC
+  ACADEMICS
+  FINANCIALS
+  COLLATERAL
+}
+
+enum DocumentRequestStatus {
+  PENDING
+  PARTIAL_RECEIVED
+  COMPLETED
+  EXPIRED
+}
+
+// ─── Document Submissions ────────────────────────────────────────────────────
+
+model DocumentSubmission {
+  id                    String    @id @default(cuid())
+  docSubmissionCode     String    @unique @default(cuid()) // DS-XXXX format
+  documentRequestId     String
+  
+  name                  String
+  category              DocumentCategory
+  documentType          String
+  required              Boolean   @default(true)
+  
+  submissionMethod      SubmissionMethod @default(UPLOAD)
+  submissionDate        DateTime?
+  
+  fileUrl               String?
+  fileName              String?
+  fileSize              BigInt?
+  mimeType              String?
+  
+  status                DocumentStatus @default(NOT_STARTED)
+  approvedAt            DateTime?
+  rejectedAt            DateTime?
+  rejectionReason       String?
+  
+  versions              Json?     // Array of {version, fileUrl, uploadedAt, status}
+  extractedData         Json?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relationships
+  documentRequest       DocumentRequest @relation(fields: [documentRequestId], references: [id], onDelete: Cascade)
+
+  @@index([documentRequestId])
+  @@index([category])
+  @@index([status])
+}
+
+enum SubmissionMethod {
+  UPLOAD
+  EMAIL
+  MANUAL_ENTRY
+}
+
+enum DocumentStatus {
+  NOT_STARTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+// ─── Audit Logs ──────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id                    String    @id @default(cuid())
+  auditCode             String    @unique @default(cuid()) // AL-XXXX format
+  
+  entityType            String
+  entityId              String
+  action                AuditAction
+  
+  userId                String
+  userName              String
+  
+  changes               Json?
+  
+  sensitiveDataAccessed Boolean   @default(false)
+  accessReason          String?
+  
+  timestamp             DateTime @default(now())
+
+  // Relationships
+  user                  User    @relation("UserAction", fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([timestamp])
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  ARCHIVE
+  TRANSITION
+}

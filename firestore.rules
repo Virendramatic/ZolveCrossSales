@@ -1,0 +1,194 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+    
+    // Helper function to check if user is counselor
+    function isCounselor() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'COUNSELOR';
+    }
+    
+    // Helper function to check ownership
+    function isOwner(ownerId) {
+      return isAuth() && request.auth.uid == ownerId;
+    }
+    
+    // ─── Users Collection ──────────────────────────────────────────────────
+    
+    match /users/{userId} {
+      // Read: User can read their own document or admins can read all
+      allow read: if isAuth() && (isOwner(userId) || isAdmin());
+      
+      // Write: User can update their own document, admins can update all
+      allow write: if isAuth() && (isOwner(userId) || isAdmin());
+      
+      // Delete: Only admins can delete users
+      allow delete: if isAdmin();
+      
+      // Subcollections
+      match /auditLogs/{logId} {
+        allow read: if isAuth() && (isOwner(userId) || isAdmin());
+        allow write: if false; // Audit logs are server-generated
+      }
+    }
+    
+    // ─── Leads Collection ─────────────────────────────────────────────────
+    
+    match /leads/{leadId} {
+      // Read: Owner (counselor) or admin can read
+      allow read: if isAuth() && (
+        resource.data.currentOwnerId == request.auth.uid || isAdmin()
+      );
+      
+      // Create: Authenticated users can create
+      allow create: if isAuth() && request.resource.data.currentOwnerId == request.auth.uid;
+      
+      // Update: Owner or admin can update
+      allow update: if isAuth() && (
+        resource.data.currentOwnerId == request.auth.uid || isAdmin()
+      );
+      
+      // Delete: Only admin can delete
+      allow delete: if isAdmin();
+      
+      // Subcollections
+      match /comments/{commentId} {
+        allow read: if isAuth() && (
+          get(/databases/$(database)/documents/leads/$(leadId)).data.currentOwnerId == request.auth.uid || 
+          isAdmin()
+        );
+        allow create: if isAuth();
+        allow update: if isAuth() && (
+          resource.data.authorId == request.auth.uid || isAdmin()
+        );
+        allow delete: if isAuth() && (
+          resource.data.authorId == request.auth.uid || isAdmin()
+        );
+      }
+      
+      match /products/{productId} {
+        allow read: if isAuth() && (
+          get(/databases/$(database)/documents/leads/$(leadId)).data.currentOwnerId == request.auth.uid || 
+          isAdmin()
+        );
+        allow write: if isAuth() && (
+          get(/databases/$(database)/documents/leads/$(leadId)).data.currentOwnerId == request.auth.uid || 
+          isAdmin()
+        );
+      }
+    }
+    
+    // ─── Education Loans Collection ────────────────────────────────────────
+    
+    match /educationLoans/{loanId} {
+      // Read: Owner counselor or admin
+      allow read: if isAuth() && (
+        resource.data.counselorZrmId == request.auth.uid || isAdmin()
+      );
+      
+      // Create: Authenticated users can create
+      allow create: if isAuth();
+      
+      // Update: Owner or admin
+      allow update: if isAuth() && (
+        resource.data.counselorZrmId == request.auth.uid || isAdmin()
+      ) && (
+        // Only allow updates in STARTED stage
+        resource.data.loanStage == 'STARTED' || 
+        // Or allow stage updates
+        request.resource.data.loanStage != resource.data.loanStage ||
+        // Or allow admin to update anything
+        isAdmin()
+      );
+      
+      // Delete: Admin only (soft delete via archive flag)
+      allow delete: if isAdmin();
+      
+      // Subcollections
+      match /lenderApplications/{lenderId} {
+        allow read: if isAuth() && (
+          get(/databases/$(database)/documents/educationLoans/$(loanId)).data.counselorZrmId == request.auth.uid || 
+          isAdmin()
+        );
+        allow write: if isAuth() && (
+          get(/databases/$(database)/documents/educationLoans/$(loanId)).data.counselorZrmId == request.auth.uid || 
+          isAdmin()
+        );
+      }
+      
+      match /documentRequests/{docRequestId} {
+        allow read: if isAuth() && (
+          get(/databases/$(database)/documents/educationLoans/$(loanId)).data.counselorZrmId == request.auth.uid || 
+          isAdmin()
+        );
+        allow write: if isAuth() && (
+          get(/databases/$(database)/documents/educationLoans/$(loanId)).data.counselorZrmId == request.auth.uid || 
+          isAdmin()
+        );
+        
+        match /documents/{documentId} {
+          allow read: if isAuth() && (
+            get(/databases/$(database)/documents/educationLoans/$(loanId)).data.counselorZrmId == request.auth.uid || 
+            isAdmin()
+          );
+          allow write: if isAuth() && isAdmin(); // Only admins approve/reject
+        }
+      }
+      
+      match /stageHistory/{historyId} {
+        allow read: if isAuth() && (
+          get(/databases/$(database)/documents/educationLoans/$(loanId)).data.counselorZrmId == request.auth.uid || 
+          isAdmin()
+        );
+        allow write: if false; // Server-generated
+      }
+    }
+    
+    // ─── Documents Collection ──────────────────────────────────────────────
+    
+    match /documents/{documentId} {
+      // Read: Related users or admin
+      allow read: if isAuth() && (
+        resource.data.uploadedBy == request.auth.uid || 
+        isAdmin()
+      );
+      
+      // Create: Authenticated users
+      allow create: if isAuth();
+      
+      // Update: Only admin for approvals/rejections
+      allow update: if isAdmin();
+      
+      // Delete: Admin only
+      allow delete: if isAdmin();
+    }
+    
+    // ─── Audit Logs Collection ────────────────────────────────────────────
+    
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Server-generated only
+    }
+    
+    // ─── System Configuration ──────────────────────────────────────────────
+    
+    match /config/{document=**} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+    
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
