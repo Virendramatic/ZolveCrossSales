@@ -62,29 +62,31 @@ app.use((_req: Request, res: Response) => {
 // Error handler (must be last)
 app.use(errorHandler);
 
-// Start server
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
+// Start server only if not in Vercel/serverless environment
+if (process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'production') {
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   });
-  await prisma.$disconnect();
-  process.exit(0);
-});
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
+  // Graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      console.log('Server closed');
+    });
+    await prisma.$disconnect();
+    process.exit(0);
   });
-  await prisma.$disconnect();
-  process.exit(0);
-});
+
+  process.on('SIGINT', async () => {
+    console.log('SIGINT received, shutting down gracefully');
+    server.close(() => {
+      console.log('Server closed');
+    });
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+}
 
 export { app, prisma };
