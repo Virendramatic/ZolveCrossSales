@@ -1,24 +1,22 @@
 {
   "version": 2,
-  "buildCommand": "cd backend && npm install && TS_NODE_SKIP_PROJECT=true npm run build",
+  "buildCommand": "cd backend && npm install && npm run build",
   "outputDirectory": "public",
-  "functions": {
-    "api/index.js": {
-      "runtime": "@vercel/node@3.0.0"
-    }
-  },
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api"
+      "dest": "/api/index.js"
     },
     {
       "src": "/health",
-      "dest": "/api"
+      "dest": "/api/index.js"
+    },
+    {
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/api"
+      "dest": "/api/index.js"
     }
   ]
 }
