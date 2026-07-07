@@ -56,15 +56,6 @@ try {
       console.warn('Could not load individual routes:', err.message);
     }
   }
-  
-  // Success message
-  app.get('/', (req, res) => {
-    res.send(`
-      <h1>Zolve CRM API</h1>
-      <p>Backend API is running. Use /api/ endpoints to interact with the API.</p>
-      <p>Health check: <a href="/health">/health</a></p>
-    `);
-  });
 } catch (error) {
   console.error('Error setting up API routes:', error.message);
 }
@@ -80,7 +71,7 @@ app.use('/api', (req, res) => {
   });
 });
 
-// SPA fallback - serve index.html for all non-API routes
+// SPA fallback - serve index.html for all non-API, non-static routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
