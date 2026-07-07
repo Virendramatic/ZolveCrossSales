@@ -1,5 +1,19 @@
 {
   "version": 2,
   "buildCommand": "cd backend && npm install && npm run build",
-  "outputDirectory": "public"
+  "outputDirectory": "public",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api"
+    },
+    {
+      "src": "/health",
+      "dest": "/api"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/index.html"
+    }
+  ]
 }
