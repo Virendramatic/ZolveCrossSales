@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "cd backend && npm install && npm run build",
+  "buildCommand": "npm run build:all",
+  "outputDirectory": "Frontend/dist",
   "functions": {
     "api/index.js": {
       "runtime": "nodejs20.x"
@@ -14,6 +15,10 @@
     {
       "src": "/health",
       "dest": "/api"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }

@@ -26,6 +26,11 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
+// Allow same-origin requests in production (Vercel)
+if (process.env.VERCEL === '1') {
+  corsOptions.origin = '*';
+}
+
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
