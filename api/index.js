@@ -31,8 +31,18 @@ console.log('Frontend path:', frontendPath);
 console.log('Frontend path exists:', fs.existsSync(frontendPath));
 console.log('Index.html exists:', fs.existsSync(path.join(frontendPath, 'index.html')));
 
-// Serve static files
-app.use(express.static(frontendPath));
+// Serve static files with proper MIME types
+app.use(express.static(frontendPath, {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    } else if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'text/javascript');
+    } else if (path.endsWith('.json')) {
+      res.setHeader('Content-Type', 'application/json');
+    }
+  }
+}));
 
 // Health check
 app.get('/health', (req, res) => {
