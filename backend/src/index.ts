@@ -19,14 +19,14 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 // CORS Configuration
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+const corsOptions: any = {
+  origin: ['https://zolve-cross-sales-staging.web.app', 'http://localhost:5173', process.env.FRONTEND_URL].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
-// Allow same-origin requests in production (Vercel)
+// Allow all origins in production (Vercel serverless)
 if (process.env.VERCEL === '1') {
   corsOptions.origin = '*';
 }
