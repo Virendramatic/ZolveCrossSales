@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 
@@ -17,8 +18,20 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from Frontend/dist BEFORE API routes
-const frontendPath = path.join(__dirname, '../Frontend/dist');
+// Determine frontend path - try multiple locations
+let frontendPath = path.join(__dirname, '../Frontend/dist');
+if (!fs.existsSync(frontendPath)) {
+  frontendPath = path.join(__dirname, 'Frontend/dist');
+}
+if (!fs.existsSync(frontendPath)) {
+  frontendPath = path.join(process.cwd(), 'Frontend/dist');
+}
+
+console.log('Frontend path:', frontendPath);
+console.log('Frontend path exists:', fs.existsSync(frontendPath));
+console.log('Index.html exists:', fs.existsSync(path.join(frontendPath, 'index.html')));
+
+// Serve static files
 app.use(express.static(frontendPath));
 
 // Health check
@@ -30,18 +43,15 @@ app.get('/health', (req, res) => {
 try {
   console.log('Loading API routes from backend/dist...');
   
-  // Try to require the main backend module which exports all routes
   try {
     const backendApp = require('../backend/dist/index.js').app;
     if (backendApp) {
       console.log('Successfully loaded full backend app');
-      // Mount the backend app's routes
       app.use(backendApp);
     }
   } catch (e) {
-    console.warn('Could not load full backend app, trying individual routes:', e.message);
+    console.warn('Could not load full backend app:', e.message);
     
-    // Fallback: Try individual routes
     try {
       const authRoutes = require('../backend/dist/routes/auth.routes.js').default;
       const leadRoutes = require('../backend/dist/routes/lead.routes.js').default;
@@ -71,9 +81,14 @@ app.use('/api', (req, res) => {
   });
 });
 
-// SPA fallback - serve index.html for all non-API, non-static routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
+// SPA fallback - serve index.html for all routes
+app.use((req, res) => {
+  const indexPath = path.join(frontendPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).json({ error: 'Frontend not found', path: indexPath });
+  }
 });
 
 module.exports = app;
