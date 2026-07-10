@@ -17,8 +17,10 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setError('');
     setLoading(true);
 
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
     try {
-      const response = await fetch('https://zolve-cross-sales-f20up5jt7-mantis-forex.vercel.app/api/auth/login', {
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,7 +41,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
       onLoginSuccess(data.data.accessToken, data.data.user);
     } catch (err) {
-      setError('Failed to connect to server. Make sure backend is running on http://localhost:3000');
+      setError('Failed to connect to server. Make sure backend is running');
       console.error('Login error:', err);
     } finally {
       setLoading(false);
