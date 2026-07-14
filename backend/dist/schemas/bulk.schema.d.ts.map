@@ -1,0 +1,1 @@
+{"version":3,"file":"bulk.schema.d.ts","sourceRoot":"","sources":["../../src/schemas/bulk.schema.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,CAAC,EAAE,MAAM,KAAK,CAAC;AAExB,eAAO,MAAM,gBAAgB;;;;;;;;;EAQ3B,CAAC;AAEH,MAAM,MAAM,eAAe,GAAG,CAAC,CAAC,KAAK,CAAC,OAAO,gBAAgB,CAAC,CAAC;AAE/D,eAAO,MAAM,gBAAgB;;;;;;EAE3B,CAAC;AAEH,MAAM,MAAM,eAAe,GAAG,CAAC,CAAC,KAAK,CAAC,OAAO,gBAAgB,CAAC,CAAC"}
