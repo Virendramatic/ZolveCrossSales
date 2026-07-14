@@ -3,6 +3,10 @@
  * Exports the Express app from the compiled backend
  */
 
+// Set environment variables for serverless execution
+process.env.VERCEL = '1';
+process.env.NODE_ENV = 'production';
+
 try {
   // Load and export the backend app directly
   const { app } = require('../backend/dist/index.js');
