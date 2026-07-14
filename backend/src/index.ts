@@ -12,7 +12,12 @@ import documentRoutes from './routes/document.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 
-dotenv.config();
+// Load environment variables based on NODE_ENV
+if (process.env.NODE_ENV === 'production' || process.env.VERCEL === '1') {
+  dotenv.config({ path: '.env.production' });
+} else {
+  dotenv.config();
+}
 
 const app: Express = express();
 const prisma = new PrismaClient();
