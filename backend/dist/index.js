@@ -31,7 +31,13 @@ exports.prisma = prisma;
 const PORT = process.env.PORT || 3000;
 // CORS Configuration
 const corsOptions = {
-    origin: ['https://zolve-cross-sales-staging.web.app', 'http://localhost:5173', process.env.FRONTEND_URL].filter(Boolean),
+    origin: [
+        'https://zolve-cross-sales-staging.web.app',
+        'https://zolve-cross-sales-f20up5jt7-mantis-forex.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000',
+        process.env.FRONTEND_URL
+    ].filter(Boolean),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

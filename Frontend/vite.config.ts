@@ -16,6 +16,12 @@ function figmaAssetResolver() {
   }
 }
 
+declare global {
+  interface ImportMeta {
+    readonly env: Record<string, string>;
+  }
+}
+
 export default defineConfig({
   plugins: [
     figmaAssetResolver(),
