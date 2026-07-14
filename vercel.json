@@ -1,9 +1,15 @@
 {
   "version": 2,
   "functions": {
-    "api/index.js": {
+    "api.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/api(/?|/(.*?))?",
+      "dest": "/api.js"
+    }
+  ]
 }
 
