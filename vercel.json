@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "npm --prefix backend install && npm --prefix backend run build",
   "functions": {
-    "vercel/functions/api.js": {
+    "api/index.js": {
       "maxDuration": 60
     }
   },
