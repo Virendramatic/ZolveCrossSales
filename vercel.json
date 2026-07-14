@@ -1,7 +1,4 @@
 {
-  "version": 2,
-  "routes": [
-    { "src": "/api(.*)", "dest": "/" }
-  ]
+  "version": 2
 }
 
