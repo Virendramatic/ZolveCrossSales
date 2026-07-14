@@ -17,7 +17,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setError('');
     setLoading(true);
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://zolve-cross-sales-f20up5jt7-mantis-forex.vercel.app';
 
     try {
       const response = await fetch(`${apiUrl}/api/auth/login`, {

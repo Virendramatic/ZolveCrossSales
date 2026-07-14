@@ -3,7 +3,7 @@
  * Includes auth token management and error handling
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://zolve-cross-sales-f20up5jt7-mantis-forex.vercel.app';
 
 interface ApiResponse<T> {
   success: boolean;

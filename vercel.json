@@ -1,18 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "npm run build:all",
-  "routes": [
+  "buildCommand": "cd backend && npm install && npm run build",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "api/index.js"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "Frontend/dist/assets/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "Frontend/dist/index.html"
+      "source": "/(.*)",
+      "destination": "/api/index.js"
     }
   ]
 }
